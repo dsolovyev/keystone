@@ -19,6 +19,14 @@ extern "C" {
 #endif
 
 /**
+ * @defgroup LLVMCSupportTypes Types and Enumerations
+ *
+ * @{
+ */
+
+typedef int LLVMBool;
+
+/**
  * Used to pass regions of memory through LLVM interfaces.
  *
  * @see llvm_ks::MemoryBuffer

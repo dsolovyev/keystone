@@ -386,6 +386,14 @@ auto find(R &&Range, const T &val) -> decltype(Range.begin()) {
   return std::find(Range.begin(), Range.end(), val);
 }
 
+/// Wrapper function around std::count_if to count the number of times an
+/// element satisfying a given predicate occurs in a range.
+template <typename R, typename UnaryPredicate>
+auto count_if(R &&Range, UnaryPredicate &&P)
+    -> typename std::iterator_traits<decltype(Range.begin())>::difference_type {
+  return std::count_if(Range.begin(), Range.end(), P);
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//

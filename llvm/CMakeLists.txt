@@ -314,7 +314,8 @@ if(LLVM_DISABLE_LLVM_DYLIB_ATEXIT)
   set(DISABLE_LLVM_DYLIB_ATEXIT 1)
 endif()
 
-if(CMAKE_CROSSCOMPILING)
+option(LLVM_OPTIMIZED_TABLEGEN "Force TableGen to be built with optimization" OFF)
+if(CMAKE_CROSSCOMPILING OR (LLVM_OPTIMIZED_TABLEGEN AND LLVM_ENABLE_ASSERTIONS))
   set(LLVM_USE_HOST_TOOLS ON)
 endif()
 
@@ -526,6 +527,7 @@ if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
 endif()
 
 include(AddLLVM)
+include(TableGen)
 
 if( MINGW )
   # People report that -O3 is unreliable on MinGW. The traditional
@@ -533,7 +535,20 @@ if( MINGW )
   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O3" "-O2")
 endif()
 
+# Put this before tblgen. Else we have a circular dependence.
 add_subdirectory(lib/Support)
+add_subdirectory(lib/TableGen)
+
+add_subdirectory(utils/TableGen)
+
+# Force target to be built as soon as possible. Clang modules builds depend
+# header-wise on it as they ship all headers from the umbrella folders. Building
+# an entire module might include header, which depends on intrinsics_gen. This
+# should be right after LLVMSupport and LLVMTableGen otherwise we introduce a
+# circular dependence.
+if (LLVM_ENABLE_MODULES)
+  list(APPEND LLVM_COMMON_DEPENDS intrinsics_gen)
+endif(LLVM_ENABLE_MODULES)
 
 add_subdirectory(include/llvm)
 

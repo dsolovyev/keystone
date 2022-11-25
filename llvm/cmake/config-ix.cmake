@@ -106,6 +106,16 @@ if( NOT PURE_WINDOWS )
   check_library_exists(rt clock_gettime "" HAVE_LIBRT)
 endif()
 
+if(HAVE_LIBPTHREAD)
+  # We want to find pthreads library and at the moment we do want to
+  # have it reported as '-l<lib>' instead of '-pthread'.
+  # TODO: switch to -pthread once the rest of the build system can deal with it.
+  set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+  set(THREADS_HAVE_PTHREAD_ARG Off)
+  find_package(Threads REQUIRED)
+  set(PTHREAD_LIB ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
 # Don't look for these libraries on Windows. Also don't look for them if we're
 # using MSan, since uninstrmented third party code may call MSan interceptors
 # like strlen, leading to false positives.
