@@ -33,13 +33,14 @@ public:
   ~RISCVAsmBackend() override {}
 
   void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
-                  uint64_t Value, bool IsPCRel) const override;
+                  uint64_t Value, bool IsPCRel, unsigned int &KsError) const override;
 
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
 
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
+                            const MCAsmLayout &Layout,
+                            unsigned &KsError) const override {
     return false;
   }
 
@@ -47,8 +48,7 @@ public:
 
   bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
 
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override {
+  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {
 
     llvm_unreachable("RISCVAsmBackend::relaxInstruction() unimplemented");
   }
@@ -71,7 +71,7 @@ bool RISCVAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
 
 void RISCVAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
                                  unsigned DataSize, uint64_t Value,
-                                 bool IsPCRel) const {
+                                 bool IsPCRel, unsigned int &KsError) const {
   return;
 }
 
@@ -84,8 +84,7 @@ RISCVAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
 
 MCAsmBackend *llvm_ks::createRISCVAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU,
-                                          const MCTargetOptions &Options) {
+                                          const Triple &TT, StringRef CPU) {
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   return new RISCVAsmBackend(OSABI, TT.isArch64Bit());
 }

@@ -40,8 +40,7 @@ MCCodeEmitter *createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
                                         MCContext &Ctx);
 
 MCAsmBackend *createRISCVAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU,
-                                    const MCTargetOptions &Options);
+                                    const Triple &TT, StringRef CPU);
 
 MCObjectWriter *createRISCVELFObjectWriter(raw_pwrite_stream &OS, uint8_t OSABI,
                                            bool Is64Bit);

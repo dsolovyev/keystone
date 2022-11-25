@@ -23,7 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 
-#include "keystone/keystone.h"
+#include "../../../../include/keystone/keystone.h"
 
 namespace llvm_ks {
 class raw_ostream;

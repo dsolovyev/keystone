@@ -30,7 +30,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <tuple>
 
-#include "keystone/keystone.h"
+#include "../../../../include/keystone/keystone.h"
 
 using namespace llvm_ks;
 

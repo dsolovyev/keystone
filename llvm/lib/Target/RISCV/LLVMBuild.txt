@@ -27,5 +27,5 @@ parent = Target
 type = Library
 name = RISCVCodeGen
 parent = RISCV
-required_libraries = Core CodeGen RISCVInfo Support Target
+required_libraries = RISCVInfo Support Target
 add_to_library_groups = RISCV

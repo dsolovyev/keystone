@@ -20,8 +20,6 @@ namespace llvm_ks {
 class Triple;
 
 class RISCVMCAsmInfo : public MCAsmInfoELF {
-  void anchor() override;
-
 public:
   explicit RISCVMCAsmInfo(const Triple &TargetTriple);
 };

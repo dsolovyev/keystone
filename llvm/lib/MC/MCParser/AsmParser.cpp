@@ -44,7 +44,7 @@
 #include <string>
 #include <vector>
 
-#include <keystone/keystone.h>
+#include "../../../../include/keystone/keystone.h"
 //#include <iostream>
 
 using namespace llvm_ks;

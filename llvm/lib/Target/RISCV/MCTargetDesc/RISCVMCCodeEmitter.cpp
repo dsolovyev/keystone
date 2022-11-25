@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
-#include "llvm/ADT/Statistic.h"
+//#include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -27,7 +27,7 @@ using namespace llvm_ks;
 
 #define DEBUG_TYPE "mccodeemitter"
 
-STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
+//STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 
 namespace {
 class RISCVMCCodeEmitter : public MCCodeEmitter {
@@ -40,9 +40,10 @@ public:
 
   ~RISCVMCCodeEmitter() override {}
 
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
-                         const MCSubtargetInfo &STI) const override;
+                         const MCSubtargetInfo &STI,
+                         unsigned int &KsError) const override;
 
   /// TableGen'erated function for getting the binary encoding for an
   /// instruction.
@@ -64,13 +65,14 @@ MCCodeEmitter *llvm_ks::createRISCVMCCodeEmitter(const MCInstrInfo &MCII,
   return new RISCVMCCodeEmitter(Ctx);
 }
 
-void RISCVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void RISCVMCCodeEmitter::encodeInstruction(MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
-                                           const MCSubtargetInfo &STI) const {
+                                           const MCSubtargetInfo &STI,
+                                           unsigned int &KsError) const {
   // For now, we only support RISC-V instructions with 32-bit length
   uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
   support::endian::Writer<support::little>(OS).write(Bits);
-  ++MCNumEmitted; // Keep track of the # of mi's emitted.
+  //++MCNumEmitted; // Keep track of the # of mi's emitted.
 }
 
 unsigned

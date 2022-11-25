@@ -12,3 +12,7 @@ add_llvm_target(RISCVCodeGen
 
 add_subdirectory(TargetInfo)
 add_subdirectory(MCTargetDesc)
+
+# Fix order of *.inc/*.td dependencies
+add_dependencies(LLVMRISCVDesc RISCVCommonTableGen)
+add_dependencies(LLVMRISCVInfo RISCVCommonTableGen)

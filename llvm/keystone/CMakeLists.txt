@@ -67,3 +67,5 @@ if (APPLE)
                         INSTALL_RPATH "")
 endif()
 
+target_link_libraries(keystone LLVMRISCVInfo LLVMRISCVDesc)
+

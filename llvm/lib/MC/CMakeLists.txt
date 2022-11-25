@@ -1,0 +1,40 @@
+add_llvm_library(LLVMMC
+  ConstantPools.cpp
+  ELFObjectWriter.cpp
+  MCAsmBackend.cpp
+  MCAsmInfo.cpp
+  MCAsmInfoCOFF.cpp
+  MCAsmInfoDarwin.cpp
+  MCAsmInfoELF.cpp
+  MCAssembler.cpp
+  MCCodeEmitter.cpp
+  MCContext.cpp
+  MCELFObjectTargetWriter.cpp
+  MCELFStreamer.cpp
+  MCExpr.cpp
+  MCFragment.cpp
+  MCInst.cpp
+  MCInstrDesc.cpp
+  MCLabel.cpp
+  MCObjectFileInfo.cpp
+  MCObjectStreamer.cpp
+  MCObjectWriter.cpp
+  MCRegisterInfo.cpp
+  MCSection.cpp
+  MCSectionCOFF.cpp
+  MCSectionELF.cpp
+  MCSectionMachO.cpp
+  MCStreamer.cpp
+  MCSubtargetInfo.cpp
+  MCSymbol.cpp
+  MCSymbolELF.cpp
+  MCTargetOptions.cpp
+  MCValue.cpp
+  StringTableBuilder.cpp
+  SubtargetFeature.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${LLVM_MAIN_INCLUDE_DIR}/llvm/MC
+  )
+
+add_subdirectory(MCParser)
