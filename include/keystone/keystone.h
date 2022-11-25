@@ -64,6 +64,7 @@ typedef enum ks_arch {
     KS_ARCH_SYSTEMZ,    // SystemZ architecture (S390X)
     KS_ARCH_HEXAGON,    // Hexagon architecture
     KS_ARCH_EVM,        // Ethereum Virtual Machine architecture
+    KS_ARCH_RISCV,      // RISC-V architecture
     KS_ARCH_MAX,
 } ks_arch;
 
@@ -93,6 +94,10 @@ typedef enum ks_mode {
     KS_MODE_SPARC32 = 1 << 2,     // 32-bit mode
     KS_MODE_SPARC64 = 1 << 3,     // 64-bit mode
     KS_MODE_V9 = 1 << 4,          // SparcV9 mode
+    // riscv
+    KS_MODE_RISCV32  = 1 << 0,    // RISC-V RV32G
+    KS_MODE_RISCV64  = 1 << 1,    // RISC-V RV64G
+    KS_MODE_RISCVC   = 1 << 2,    // RISC-V compressed instructure mode
 } ks_mode;
 
 // All generic errors related to input assembly >= KS_ERR_ASM

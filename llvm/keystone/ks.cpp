@@ -477,6 +477,24 @@ ks_err ks_open(ks_arch arch, int mode, ks_engine **result)
                 return KS_ERR_OK;
             }
 #endif
+
+#ifdef LLVM_ENABLE_ARCH_RISCV
+            case KS_ARCH_RISCV: {
+                if ((mode & ~KS_MODE_RISCV_MASK) ||
+                        !(mode & (KS_MODE_RISCV32|KS_MODE_RISCV64))) {
+                    delete ks;
+                    return KS_ERR_MODE;
+                }
+
+                if (mode & KS_MODE_RISCV32)
+                    TripleName = "riscv32";
+                else if (mode & KS_MODE_RISCV64)
+                    TripleName = "riscv64";
+
+                InitKs(arch, ks, TripleName);
+                break;
+            }
+#endif
         }
 
         if (TripleName.empty()) {

@@ -83,6 +83,11 @@ static void usage(char *prog)
         printf("        evm:       Ethereum Virtual Machine\n");
     }
 
+    if (ks_arch_supported(KS_ARCH_RISCV)) {
+        printf("        riscv32:   RISC-V 32 bit\n");
+        printf("        riscv64:   RISC-V 64 bit\n");
+    }
+
     printf("\nExtra options:\n");
     printf("        -b binary output\n\n");
 }
@@ -305,6 +310,14 @@ int main(int argc, char **argv)
 
     if (!strcmp(mode, "evm")) {
         err = ks_open(KS_ARCH_EVM, 0, &ks);
+    }
+
+    if (!strcmp(mode, "riscv32")) {
+        err = ks_open(KS_ARCH_RISCV, KS_MODE_RISCV32, &ks);
+    }
+
+    if (!strcmp(mode, "riscv64")) {
+        err = ks_open(KS_ARCH_RISCV, KS_MODE_RISCV64, &ks);
     }
 
     if (err) {
