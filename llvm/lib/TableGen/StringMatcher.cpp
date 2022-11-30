@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/StringMatcher.h"
 #include "llvm/Support/raw_ostream.h"
 #include <map>
@@ -40,17 +41,18 @@ FindFirstNonCommonLetter(const std::vector<const
 /// code to verify that CharNo and later are the same.
 ///
 /// \return - True if control can leave the emitted code fragment.
-bool StringMatcher::
-EmitStringMatcherForChar(const std::vector<const StringPair*> &Matches,
-                         unsigned CharNo, unsigned IndentCount) const {
+bool StringMatcher::EmitStringMatcherForChar(
+    const std::vector<const StringPair *> &Matches, unsigned CharNo,
+    unsigned IndentCount, bool IgnoreDuplicates) const {
   assert(!Matches.empty() && "Must have at least one string to match!");
-  std::string Indent(IndentCount*2+4, ' ');
+  std::string Indent(IndentCount * 2 + 4, ' ');
   
   // If we have verified that the entire string matches, we're done: output the
   // matching code.
   if (CharNo == Matches[0]->first.size()) {
-    assert(Matches.size() == 1 && "Had duplicate keys to match on");
-    
+    if (Matches.size() > 1 && !IgnoreDuplicates)
+      PrintFatalError("Had duplicate keys to match on");
+
     // If the to-execute code has \n's in it, indent each subsequent line.
     StringRef Code = Matches[0]->second;
     
@@ -95,7 +97,8 @@ EmitStringMatcherForChar(const std::vector<const StringPair*> &Matches,
       OS << Indent << "  break;\n";
     }
     
-    return EmitStringMatcherForChar(Matches, FirstNonCommonLetter, IndentCount);
+    return EmitStringMatcherForChar(Matches, FirstNonCommonLetter, IndentCount,
+                                    IgnoreDuplicates);
   }
   
   // Otherwise, we have multiple possible things, emit a switch on the
@@ -110,7 +113,8 @@ EmitStringMatcherForChar(const std::vector<const StringPair*> &Matches,
        << LI->second.size() << " string";
     if (LI->second.size() != 1) OS << 's';
     OS << " to match.\n";
-    if (EmitStringMatcherForChar(LI->second, CharNo+1, IndentCount+1))
+    if (EmitStringMatcherForChar(LI->second, CharNo + 1, IndentCount + 1,
+                                 IgnoreDuplicates))
       OS << Indent << "  break;\n";
   }
   
@@ -121,7 +125,7 @@ EmitStringMatcherForChar(const std::vector<const StringPair*> &Matches,
 
 /// Emit - Top level entry point.
 ///
-void StringMatcher::Emit(unsigned Indent) const {
+void StringMatcher::Emit(unsigned Indent, bool IgnoreDuplicates) const {
   // If nothing to match, just fall through.
   if (Matches.empty()) return;
   
@@ -141,7 +145,7 @@ void StringMatcher::Emit(unsigned Indent) const {
     OS.indent(Indent*2+2) << "case " << LI->first << ":\t // "
        << LI->second.size()
        << " string" << (LI->second.size() == 1 ? "" : "s") << " to match.\n";
-    if (EmitStringMatcherForChar(LI->second, 0, Indent))
+    if (EmitStringMatcherForChar(LI->second, 0, Indent, IgnoreDuplicates))
       OS.indent(Indent*2+4) << "break;\n";
   }
   
