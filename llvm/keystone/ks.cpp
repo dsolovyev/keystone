@@ -239,6 +239,9 @@ static ks_err InitKs(int arch, ks_engine *ks, std::string TripleName)
     if (ks->arch == KS_ARCH_X86)
         MCPU = "knl";
 
+    if (ks->arch == KS_ARCH_RISCV)
+        ks->FeaturesStr = "+m";
+
     ks->MCII = ks->TheTarget->createMCInstrInfo();
     ks->STI = ks->TheTarget->createMCSubtargetInfo(ks->TripleName, MCPU, ks->FeaturesStr);
     ks->MAB = ks->TheTarget->createMCAsmBackend(*ks->MRI, ks->TripleName, MCPU);
