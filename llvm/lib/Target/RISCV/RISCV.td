@@ -20,7 +20,7 @@ def RV64         : HwMode<"+64bit">;
 def RV32         : HwMode<"-64bit">;
 
 //===----------------------------------------------------------------------===//
-// Register file, instruction descriptions.
+// Registers, calling conventions, instruction descriptions.
 //===----------------------------------------------------------------------===//
 
 include "RISCVRegisterInfo.td"

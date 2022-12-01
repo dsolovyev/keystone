@@ -14,6 +14,13 @@
 include "RISCVInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
+// RISC-V specific DAG Nodes.
+//===----------------------------------------------------------------------===//
+
+def RetFlag : SDNode<"RISCVISD::RET_FLAG", SDTNone,
+                     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
+
+//===----------------------------------------------------------------------===//
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
@@ -43,12 +50,12 @@ def fencearg : Operand<XLenVT> {
   let DecoderMethod = "decodeUImmOperand<4>";
 }
 
-def uimm5 : Operand<XLenVT> {
+def uimm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
   let DecoderMethod = "decodeUImmOperand<5>";
 }
 
-def simm12 : Operand<XLenVT> {
+def simm12 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<12>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<12>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<12>";
@@ -78,6 +85,24 @@ def simm21_lsb0 : Operand<XLenVT> {
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
 }
+
+// Standalone (codegen-only) immleaf patterns.
+def simm32 : ImmLeaf<XLenVT, [{return isInt<32>(Imm);}]>;
+
+// Extract least significant 12 bits from an immediate value and sign extend
+// them.
+def LO12Sext : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(SignExtend64<12>(N->getZExtValue()),
+                                   SDLoc(N), N->getValueType(0));
+}]>;
+
+// Extract the most significant 20 bits from an immediate value. Add 1 if bit
+// 11 is 1, to compensate for the low 12 bits in the matching immediate addi
+// or ld/st being negative.
+def HI20 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(((N->getZExtValue()+0x800) >> 12) & 0xfffff,
+                                   SDLoc(N), N->getValueType(0));
+}]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -231,3 +256,58 @@ def CSRRC : CSR_ir<0b011, "csrrc">;
 def CSRRWI : CSR_ii<0b101, "csrrwi">;
 def CSRRSI : CSR_ii<0b110, "csrrsi">;
 def CSRRCI : CSR_ii<0b111, "csrrci">;
+
+//===----------------------------------------------------------------------===//
+// Pseudo-instructions and codegen patterns
+//
+// Naming convention: For 'generic' pattern classes, we use the naming
+// convention PatTy1Ty2. For pattern classes which offer a more complex
+// expension, prefix the class name, e.g. BccPat.
+//===----------------------------------------------------------------------===//
+
+/// Generic pattern classes
+
+class PatGprGpr<SDPatternOperator OpNode, RVInstR Inst>
+    : Pat<(OpNode GPR:$rs1, GPR:$rs2), (Inst GPR:$rs1, GPR:$rs2)>;
+class PatGprSimm12<SDPatternOperator OpNode, RVInstI Inst>
+    : Pat<(OpNode GPR:$rs1, simm12:$imm12), (Inst GPR:$rs1, simm12:$imm12)>;
+class PatGprUimm5<SDPatternOperator OpNode, RVInstIShift Inst>
+    : Pat<(OpNode GPR:$rs1, uimm5:$shamt),
+          (Inst GPR:$rs1, uimm5:$shamt)>;
+
+/// Immediates
+
+def : Pat<(simm12:$imm), (ADDI X0, simm12:$imm)>;
+// TODO: Add a pattern for immediates with all zeroes in the lower 12 bits.
+def : Pat<(simm32:$imm), (ADDI (LUI (HI20 imm:$imm)), (LO12Sext imm:$imm))>;
+
+/// Simple arithmetic operations
+
+def : PatGprGpr<add, ADD>;
+def : PatGprSimm12<add, ADDI>;
+def : PatGprGpr<sub, SUB>;
+def : PatGprGpr<or, OR>;
+def : PatGprSimm12<or, ORI>;
+def : PatGprGpr<and, AND>;
+def : PatGprSimm12<and, ANDI>;
+def : PatGprGpr<xor, XOR>;
+def : PatGprSimm12<xor, XORI>;
+def : PatGprGpr<shl, SLL>;
+def : PatGprUimm5<shl, SLLI>;
+def : PatGprGpr<srl, SRL>;
+def : PatGprUimm5<srl, SRLI>;
+def : PatGprGpr<sra, SRA>;
+def : PatGprUimm5<sra, SRAI>;
+
+/// Setcc
+
+def : PatGprGpr<setlt, SLT>;
+def : PatGprSimm12<setlt, SLTI>;
+def : PatGprGpr<setult, SLTU>;
+def : PatGprSimm12<setult, SLTIU>;
+
+/// Branches and jumps
+
+let isBarrier = 1, isReturn = 1, isTerminator = 1 in
+def PseudoRET : Pseudo<(outs), (ins), [(RetFlag)]>,
+                PseudoInstExpansion<(JALR X0, X1, 0)>;
