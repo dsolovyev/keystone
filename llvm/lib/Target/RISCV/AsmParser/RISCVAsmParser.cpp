@@ -149,6 +149,8 @@ public:
   template <int N> bool isBareSimmNLsb0() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
+    if (!isImm())
+      return false;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
     bool IsValid;
     if (!IsConstantImm)
@@ -188,6 +190,8 @@ public:
   bool isUImm5() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
+    if (!isImm())
+      return false;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
     return IsConstantImm && isUInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
@@ -196,6 +200,8 @@ public:
     RISCVMCExpr::VariantKind VK;
     int64_t Imm;
     bool IsValid;
+    if (!isImm())
+      return false;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
     if (!IsConstantImm)
       IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK, Imm);
@@ -208,6 +214,8 @@ public:
   bool isUImm12() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK;
+    if (!isImm())
+      return false;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
     return IsConstantImm && isUInt<12>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
@@ -218,6 +226,8 @@ public:
     RISCVMCExpr::VariantKind VK;
     int64_t Imm;
     bool IsValid;
+    if (!isImm())
+      return false;
     bool IsConstantImm = evaluateConstantImm(Imm, VK);
     if (!IsConstantImm)
       IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK, Imm);
@@ -283,7 +293,7 @@ public:
   }
 
   static std::unique_ptr<RISCVOperand> createImm(const MCExpr *Val, SMLoc S,
-                                                 SMLoc E, MCContext &Ctx) {
+                                                 SMLoc E) {
     auto Op = make_unique<RISCVOperand>(Immediate);
     Op->Imm.Val = Val;
     Op->StartLoc = S;
@@ -475,7 +485,7 @@ OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
     return parseOperandWithModifier(Operands);
   }
 
-  Operands.push_back(RISCVOperand::createImm(Res, S, E, getContext()));
+  Operands.push_back(RISCVOperand::createImm(Res, S, E));
   return MatchOperand_Success;
 }
 
@@ -515,7 +525,7 @@ RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   }
 
   const MCExpr *ModExpr = RISCVMCExpr::create(SubExpr, VK, getContext());
-  Operands.push_back(RISCVOperand::createImm(ModExpr, S, E, getContext()));
+  Operands.push_back(RISCVOperand::createImm(ModExpr, S, E));
   return MatchOperand_Success;
 }
 
