@@ -67,7 +67,7 @@ def uimm12 : Operand<XLenVT> {
 }
 
 // A 13-bit signed immediate where the least significant bit is zero.
-def simm13_lsb0 : Operand<XLenVT> {
+def simm13_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<13, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<13>";
@@ -80,7 +80,7 @@ def uimm20 : Operand<XLenVT> {
 }
 
 // A 21-bit signed immediate where the least significant bit is zero.
-def simm21_lsb0 : Operand<XLenVT> {
+def simm21_lsb0 : Operand<OtherVT> {
   let ParserMatchClass = SImmAsmOperand<21, "Lsb0">;
   let EncoderMethod = "getImmOpValueAsr1";
   let DecoderMethod = "decodeSImmOperandAndLsl1<21>";
@@ -308,6 +308,66 @@ def : PatGprSimm12<setult, SLTIU>;
 
 /// Branches and jumps
 
+// Match `(brcond (CondOp ..), ..)` and lower to the appropriate RISC-V branch
+// instruction.
+class BccPat<PatFrag CondOp, RVInstB Inst>
+    : Pat<(brcond (i32 (CondOp GPR:$rs1, GPR:$rs2)), bb:$imm12),
+          (Inst GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12)>;
+
+def : BccPat<seteq, BEQ>;
+def : BccPat<setne, BNE>;
+def : BccPat<setlt, BLT>;
+def : BccPat<setge, BGE>;
+def : BccPat<setult, BLTU>;
+def : BccPat<setuge, BGEU>;
+
+class BccSwapPat<PatFrag CondOp, RVInst InstBcc>
+    : Pat<(brcond (i32 (CondOp GPR:$rs1, GPR:$rs2)), bb:$imm12),
+          (InstBcc GPR:$rs2, GPR:$rs1, bb:$imm12)>;
+
+// Condition codes that don't have matching RISC-V branch instructions, but
+// are trivially supported by swapping the two input operands
+def : BccSwapPat<setgt, BLT>;
+def : BccSwapPat<setle, BGE>;
+def : BccSwapPat<setugt, BLTU>;
+def : BccSwapPat<setule, BGEU>;
+
+// An extra pattern is needed for a brcond without a setcc (i.e. where the
+// condition was calculated elsewhere).
+def : Pat<(brcond GPR:$cond, bb:$imm12), (BNE GPR:$cond, X0, bb:$imm12)>;
+
+let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+def PseudoBR : Pseudo<(outs), (ins simm21_lsb0:$imm20), [(br bb:$imm20)]>,
+               PseudoInstExpansion<(JAL X0, simm21_lsb0:$imm20)>;
+
 let isBarrier = 1, isReturn = 1, isTerminator = 1 in
 def PseudoRET : Pseudo<(outs), (ins), [(RetFlag)]>,
                 PseudoInstExpansion<(JALR X0, X1, 0)>;
+
+/// Loads
+
+multiclass LdPat<PatFrag LoadOp, RVInst Inst> {
+  def : Pat<(LoadOp GPR:$rs1), (Inst GPR:$rs1, 0)>;
+  def : Pat<(LoadOp (add GPR:$rs1, simm12:$imm12)),
+            (Inst GPR:$rs1, simm12:$imm12)>;
+}
+
+defm : LdPat<sextloadi8, LB>;
+defm : LdPat<extloadi8, LB>;
+defm : LdPat<sextloadi16, LH>;
+defm : LdPat<extloadi16, LH>;
+defm : LdPat<load, LW>;
+defm : LdPat<zextloadi8, LBU>;
+defm : LdPat<zextloadi16, LHU>;
+
+/// Stores
+
+multiclass StPat<PatFrag StoreOp, RVInst Inst> {
+  def : Pat<(StoreOp GPR:$rs2, GPR:$rs1), (Inst GPR:$rs2, GPR:$rs1, 0)>;
+  def : Pat<(StoreOp GPR:$rs2, (add GPR:$rs1, simm12:$imm12)),
+            (Inst GPR:$rs2, GPR:$rs1, simm12:$imm12)>;
+}
+
+defm : StPat<truncstorei8, SB>;
+defm : StPat<truncstorei16, SH>;
+defm : StPat<store, SW>;
