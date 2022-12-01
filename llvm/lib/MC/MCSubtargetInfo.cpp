@@ -1,4 +1,4 @@
-//===-- MCSubtargetInfo.cpp - Subtarget Information -----------------------===//
+//===- MCSubtargetInfo.cpp - Subtarget Information ------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -8,11 +8,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/MC/MCInstrItineraries.h"
+#include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
+#include <cstring>
 
 using namespace llvm_ks;
 
@@ -25,8 +29,10 @@ static FeatureBitset getFeatures(StringRef CPU, StringRef FS,
 
 void MCSubtargetInfo::InitMCProcessorInfo(StringRef CPU, StringRef FS) {
   FeatureBits = getFeatures(CPU, FS, ProcDesc, ProcFeatures);
-  if (!CPU.empty() && ProcSchedModels)
-      CPUSchedModel = &getSchedModelForCPU(CPU);
+  if (!CPU.empty())
+    CPUSchedModel = &getSchedModelForCPU(CPU);
+  else
+    CPUSchedModel = &MCSchedModel::GetDefaultSchedModel();
 }
 
 void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef FS) {
@@ -36,9 +42,12 @@ void MCSubtargetInfo::setDefaultFeatures(StringRef CPU, StringRef FS) {
 MCSubtargetInfo::MCSubtargetInfo(
     const Triple &TT, StringRef C, StringRef FS,
     ArrayRef<SubtargetFeatureKV> PF, ArrayRef<SubtargetFeatureKV> PD,
-    const SubtargetInfoKV *ProcSched)
+    const SubtargetInfoKV *ProcSched, const MCWriteProcResEntry *WPR,
+    const MCWriteLatencyEntry *WL, const MCReadAdvanceEntry *RA,
+    const InstrStage *IS, const unsigned *OC, const unsigned *FP)
     : TargetTriple(TT), CPU(C), ProcFeatures(PF), ProcDesc(PD),
-    ProcSchedModels(ProcSched) {
+      ProcSchedModels(ProcSched), WriteProcResTable(WPR), WriteLatencyTable(WL),
+      ReadAdvanceTable(RA), Stages(IS), OperandCycles(OC), ForwardingPaths(FP) {
   InitMCProcessorInfo(CPU, FS);
 }
 
@@ -66,8 +75,22 @@ FeatureBitset MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
   return FeatureBits;
 }
 
+bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
+  SubtargetFeatures T(FS);
+  FeatureBitset Set, All;
+  for (std::string F : T.getFeatures()) {
+    SubtargetFeatures::ApplyFeatureFlag(Set, F, ProcFeatures);
+    if (F[0] == '-')
+      F[0] = '+';
+    SubtargetFeatures::ApplyFeatureFlag(All, F, ProcFeatures);
+  }
+  return (FeatureBits & All) == Set;
+}
+
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
-  assert(ProcSchedModels && "Processor machine model not available!");
+  if (!ProcSchedModels) {
+    return MCSchedModel::GetDefaultSchedModel();
+  }
 
   ArrayRef<SubtargetInfoKV> SchedModels(ProcSchedModels, ProcDesc.size());
 
@@ -80,7 +103,6 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
   // Find entry
   auto Found =
     std::lower_bound(SchedModels.begin(), SchedModels.end(), CPU);
-#if 0
   if (Found == SchedModels.end() || StringRef(Found->Key) != CPU) {
     if (CPU != "help") // Don't error if the user asked for help.
       errs() << "'" << CPU
@@ -88,8 +110,18 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
              << " (ignoring processor)\n";
     return MCSchedModel::GetDefaultSchedModel();
   }
-#endif
   assert(Found->Value && "Missing processor SchedModel value");
   return *(const MCSchedModel *)Found->Value;
 }
 
+InstrItineraryData
+MCSubtargetInfo::getInstrItineraryForCPU(StringRef CPU) const {
+  const MCSchedModel &SchedModel = getSchedModelForCPU(CPU);
+  return InstrItineraryData(SchedModel, Stages, OperandCycles, ForwardingPaths);
+}
+
+/// Initialize an InstrItineraryData instance.
+void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
+  InstrItins = InstrItineraryData(getSchedModel(), Stages, OperandCycles,
+                                  ForwardingPaths);
+}

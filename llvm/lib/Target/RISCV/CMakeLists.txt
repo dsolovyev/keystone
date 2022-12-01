@@ -4,6 +4,7 @@ tablegen(LLVM RISCVGenRegisterInfo.inc -gen-register-info)
 tablegen(LLVM RISCVGenInstrInfo.inc -gen-instr-info)
 tablegen(LLVM RISCVGenMCCodeEmitter.inc -gen-emitter)
 tablegen(LLVM RISCVGenAsmMatcher.inc -gen-asm-matcher)
+tablegen(LLVM RISCVGenSubtargetInfo.inc -gen-subtarget)
 
 add_public_tablegen_target(RISCVCommonTableGen)
 
