@@ -1027,18 +1027,16 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
      << "MCRegisterClasses[] = {\n";
 
   for (const auto &RC : RegisterClasses) {
-    // Asserts to make sure values will fit in table assuming types from
-    // MCRegisterInfo.h
-    assert((RC.SpillSize/8) <= 0xffff && "SpillSize too large.");
-    assert((RC.SpillAlignment/8) <= 0xffff && "SpillAlignment too large.");
     assert(RC.CopyCost >= -128 && RC.CopyCost <= 127 && "Copy cost too large.");
 
+    uint32_t RegSize = 0;
+    if (RC.RSI.isSimple())
+      RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RC.getName() << ", " << RC.getName() << "Bits, "
        << RegClassStrings.get(RC.getName()) << ", "
        << RC.getOrder().size() << ", sizeof(" << RC.getName() << "Bits), "
        << RC.getQualifiedName() + "RegClassID" << ", "
-       << RC.SpillSize/8 << ", "
-       << RC.SpillAlignment/8 << ", "
+       << RegSize/8 << ", "
        << RC.CopyCost << ", "
        << ( RC.Allocatable ? "true" : "false" ) << " },\n";
   }
@@ -1106,7 +1104,8 @@ RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, CodeGenTarget &Target,
 
   OS << "struct " << ClassName << " : public TargetRegisterInfo {\n"
      << "  explicit " << ClassName
-     << "(unsigned RA, unsigned D = 0, unsigned E = 0, unsigned PC = 0);\n";
+     << "(unsigned RA, unsigned D = 0, unsigned E = 0,\n"
+     << "      unsigned PC = 0, unsigned HwMode = 0);\n";
   if (!RegBank.getSubRegIndices().empty()) {
     OS << "  unsigned composeSubRegIndicesImpl"
        << "(unsigned, unsigned) const override;\n"
@@ -1185,10 +1184,19 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
       AllocatableRegs.insert(Order.begin(), Order.end());
   }
 
+  const CodeGenHwModes &CGH = Target.getHwModes();
+  unsigned NumModes = CGH.getNumModeIds();
+
   // Build a shared array of value types.
-  SequenceToOffsetTable<SmallVector<MVT::SimpleValueType, 4> > VTSeqs;
-  for (const auto &RC : RegisterClasses)
-    VTSeqs.add(RC.VTs);
+  SequenceToOffsetTable<std::vector<MVT::SimpleValueType>> VTSeqs;
+  for (unsigned M = 0; M < NumModes; ++M) {
+    for (const auto &RC : RegisterClasses) {
+      std::vector<MVT::SimpleValueType> S;
+      for (const ValueTypeByHwMode &VVT : RC.VTs)
+        S.push_back(VVT.get(M).SimpleTy);
+      VTSeqs.add(S);
+    }
+  }
   VTSeqs.layout();
   OS << "\nstatic const MVT::SimpleValueType VTLists[] = {\n";
   VTSeqs.emit(OS, printSimpleValueType, "MVT::Other");
@@ -1214,6 +1222,31 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
 
   // Now that all of the structs have been emitted, emit the instances.
   if (!RegisterClasses.empty()) {
+    OS << "\nstatic const TargetRegisterInfo::RegClassInfo RegClassInfos[]"
+       << " = {\n";
+    for (unsigned M = 0; M < NumModes; ++M) {
+      unsigned EV = 0;
+      OS << "  // Mode = " << M << " (";
+      if (M == 0)
+        OS << "Default";
+      else
+        OS << CGH.getMode(M).Name;
+      OS << ")\n";
+      for (const auto &RC : RegisterClasses) {
+        assert(RC.EnumValue == EV++ && "Unexpected order of register classes");
+        const RegSizeInfo &RI = RC.RSI.get(M);
+        OS << "  { " << RI.RegSize << ", " << RI.SpillSize << ", "
+           << RI.SpillAlignment;
+        std::vector<MVT::SimpleValueType> VTs;
+        for (const ValueTypeByHwMode &VVT : RC.VTs)
+          VTs.push_back(VVT.get(M).SimpleTy);
+        OS << ", VTLists+" << VTSeqs.get(VTs) << " },    // "
+           << RC.getName() << '\n';
+      }
+    }
+    OS << "};\n";
+
+
     OS << "\nstatic const TargetRegisterClass *const "
        << "NullRegClasses[] = { nullptr };\n\n";
 
@@ -1322,8 +1355,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
       OS << "  extern const TargetRegisterClass " << RC.getName()
          << "RegClass = {\n    " << '&' << Target.getName()
          << "MCRegisterClasses[" << RC.getName() << "RegClassID],\n    "
-         << "VTLists + " << VTSeqs.get(RC.VTs) << ",\n    " << RC.getName()
-         << "SubClassMask,\n    SuperRegIdxSeqs + "
+         << RC.getName() << "SubClassMask,\n    SuperRegIdxSeqs + "
          << SuperRegIdxSeqs.get(SuperRegIdxLists[RC.EnumValue]) << ",\n    "
          << format("0x%08x,\n    ", RC.LaneMask)
          << (unsigned)RC.AllocationPriority << ",\n    "
@@ -1427,12 +1459,14 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
   EmitRegMappingTables(OS, Regs, true);
 
   OS << ClassName << "::\n" << ClassName
-     << "(unsigned RA, unsigned DwarfFlavour, unsigned EHFlavour, unsigned PC)\n"
+     << "(unsigned RA, unsigned DwarfFlavour, unsigned EHFlavour,\n"
+        "      unsigned PC, unsigned HwMode)\n"
      << "  : TargetRegisterInfo(" << TargetName << "RegInfoDesc"
-     << ", RegisterClasses, RegisterClasses+" << RegisterClasses.size() <<",\n"
-     << "             SubRegIndexNameTable, SubRegIndexLaneMaskTable, 0x";
+     << ", RegisterClasses, RegisterClasses+" << RegisterClasses.size() << ",\n"
+     << "             SubRegIndexNameTable, SubRegIndexLaneMaskTable,\n"
+     << "             ";
   OS.write_hex(RegBank.CoveringLanes);
-  OS << ") {\n"
+  OS << ", RegClassInfos, HwMode) {\n"
      << "  InitMCRegisterInfo(" << TargetName << "RegDesc, " << Regs.size() + 1
      << ", RA, PC,\n                     " << TargetName
      << "MCRegisterClasses, " << RegisterClasses.size() << ",\n"

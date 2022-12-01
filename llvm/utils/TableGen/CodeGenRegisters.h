@@ -15,6 +15,7 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
 #define LLVM_UTILS_TABLEGEN_CODEGENREGISTERS_H
 
+#include "InfoByHwMode.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
@@ -299,9 +300,8 @@ namespace llvm_ks {
   public:
     unsigned EnumValue;
     std::string Namespace;
-    SmallVector<MVT::SimpleValueType, 4> VTs;
-    unsigned SpillSize;
-    unsigned SpillAlignment;
+    SmallVector<ValueTypeByHwMode, 4> VTs;
+    RegSizeInfoByHwMode RSI;
     int CopyCost;
     bool Allocatable;
     std::string AltOrderSelect;
@@ -318,10 +318,10 @@ namespace llvm_ks {
 
     const std::string &getName() const { return Name; }
     std::string getQualifiedName() const;
-    ArrayRef<MVT::SimpleValueType> getValueTypes() const {return VTs;}
+    ArrayRef<ValueTypeByHwMode> getValueTypes() const { return VTs; }
     unsigned getNumValueTypes() const { return VTs.size(); }
 
-    MVT::SimpleValueType getValueTypeNum(unsigned VTNum) const {
+    ValueTypeByHwMode getValueTypeNum(unsigned VTNum) const {
       if (VTNum < VTs.size())
         return VTs[VTNum];
       llvm_unreachable("VTNum greater than number of ValueTypes in RegClass!");
@@ -404,18 +404,15 @@ namespace llvm_ks {
     // the topological order used for the EnumValues.
     struct Key {
       const CodeGenRegister::Vec *Members;
-      unsigned SpillSize;
-      unsigned SpillAlignment;
+      RegSizeInfoByHwMode RSI;
 
-      Key(const CodeGenRegister::Vec *M, unsigned S = 0, unsigned A = 0)
-        : Members(M), SpillSize(S), SpillAlignment(A) {}
+      Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I)
+        : Members(M), RSI(I) {}
 
       Key(const CodeGenRegisterClass &RC)
-        : Members(&RC.getMembers()),
-          SpillSize(RC.SpillSize),
-          SpillAlignment(RC.SpillAlignment) {}
+        : Members(&RC.getMembers()), RSI(RC.RSI) {}
 
-      // Lexicographical order of (Members, SpillSize, SpillAlignment).
+      // Lexicographical order of (Members, RegSizeInfoByHwMode).
       bool operator<(const Key&) const;
     };
 
@@ -477,6 +474,8 @@ namespace llvm_ks {
   // them.
   class CodeGenRegBank {
     SetTheory Sets;
+
+    const CodeGenHwModes &CGH;
 
     std::deque<CodeGenSubRegIndex> SubRegIndices;
     DenseMap<Record*, CodeGenSubRegIndex*> Def2SubRegIdx;
@@ -560,9 +559,11 @@ namespace llvm_ks {
     void computeRegUnitLaneMasks();
 
   public:
-    CodeGenRegBank(RecordKeeper&);
+    CodeGenRegBank(RecordKeeper&, const CodeGenHwModes&);
 
     SetTheory &getSets() { return Sets; }
+
+    const CodeGenHwModes &getHwModes() const { return CGH; }
 
     // Sub-register indices. The first NumNamedIndices are defined by the user
     // in the .td files. The rest are synthesized such that all sub-registers

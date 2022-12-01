@@ -379,6 +379,13 @@ bool any_of(R &&Range, UnaryPredicate &&P) {
                      std::forward<UnaryPredicate>(P));
 }
 
+/// Provide wrappers to std::none_of which take ranges instead of having to pass
+/// begin/end explicitly.
+template <typename R, typename UnaryPredicate>
+bool none_of(R &&Range, UnaryPredicate P) {
+  return std::none_of(std::begin(Range), std::end(Range), P);
+}
+
 /// Provide wrappers to std::find which take ranges instead of having to pass
 /// begin/end explicitly.
 template<typename R, class T>
