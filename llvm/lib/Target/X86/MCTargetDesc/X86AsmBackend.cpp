@@ -106,11 +106,12 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel, unsigned int &KsError) const override {
     unsigned Size = 1 << getFixupKindLog2Size(Fixup.getKind());
 
-    //assert(Fixup.getOffset() + Size <= DataSize &&
+    //assert(Fixup.getOffset() + Size <= Data.size() &&
     //       "Invalid fixup offset!");
 
     // Check that uppper bits are either all zeros or all ones.
@@ -119,7 +120,7 @@ public:
     // other assemblers.
     //assert(isIntN(Size * 8 + 1, Value) &&
     //       "Value does not fit in the Fixup field");
-    if (Fixup.getOffset() + Size > DataSize ||
+    if (Fixup.getOffset() + Size > Data.size() ||
             !isIntN(Size * 8 + 1, Value)) {
         KsError = KS_ERR_ASM_FIXUP_INVALID;
         return;

@@ -50,7 +50,8 @@ public:
     return SystemZ::NumTargetFixupKinds;
   }
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel, unsigned int &KsError) const override;
   bool mayNeedRelaxation(const MCInst &Inst) const override {
     return false;
@@ -86,15 +87,15 @@ SystemZMCAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   return Infos[Kind - FirstTargetFixupKind];
 }
 
-void SystemZMCAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                     unsigned DataSize, uint64_t Value,
-                                     bool IsPCRel, unsigned int &KsError) const {
+void SystemZMCAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                                     const MCValue &Target, MutableArrayRef<char> Data,
+                                     uint64_t Value, bool IsPCRel, unsigned int &KsError) const {
   MCFixupKind Kind = Fixup.getKind();
   unsigned Offset = Fixup.getOffset();
   unsigned Size = (getFixupKindInfo(Kind).TargetSize + 7) / 8;
 
-  //assert(Offset + Size <= DataSize && "Invalid fixup offset!");
-  if (Offset + Size > DataSize) {
+  //assert(Offset + Size <= Data.size() && "Invalid fixup offset!");
+  if (Offset + Size > Data.size()) {
       KsError = KS_ERR_ASM_FIXUP_INVALID;
       return;
   }

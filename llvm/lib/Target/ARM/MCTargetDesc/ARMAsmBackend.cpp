@@ -817,9 +817,9 @@ static unsigned getFixupKindContainerSizeBytes(unsigned Kind) {
   }
 }
 
-void ARMAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                               unsigned DataSize, uint64_t Value,
-                               bool IsPCRel, unsigned int &KsError) const
+void ARMAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                               const MCValue &Target, MutableArrayRef<char> Data,
+                               uint64_t Value, bool IsPCRel, unsigned int &KsError) const
 {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   Value =
@@ -828,8 +828,8 @@ void ARMAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
     return; // Doesn't change encoding.
 
   unsigned Offset = Fixup.getOffset();
-  //assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
-  if (Offset + NumBytes > DataSize) {
+  //assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  if (Offset + NumBytes > Data.size()) {
       KsError = KS_ERR_ASM_FIXUP_INVALID;
       return;
   }
@@ -838,9 +838,9 @@ void ARMAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
   unsigned FullSizeBytes;
   if (!IsLittleEndian) {
     FullSizeBytes = getFixupKindContainerSizeBytes(Fixup.getKind());
-    //assert((Offset + FullSizeBytes) <= DataSize && "Invalid fixup size!");
+    //assert((Offset + FullSizeBytes) <= Data.size() && "Invalid fixup size!");
     //assert(NumBytes <= FullSizeBytes && "Invalid fixup size!");
-    if ((Offset + FullSizeBytes) > DataSize ||
+    if ((Offset + FullSizeBytes) > Data.size() ||
             NumBytes > FullSizeBytes) {
         KsError = KS_ERR_ASM_FIXUP_INVALID;
         return;

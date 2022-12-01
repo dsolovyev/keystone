@@ -659,9 +659,9 @@ void MCAssembler::writeSectionData(const MCSection *Sec,
   //       Layout.getSectionAddressSize(Sec));
 }
 
-std::pair<uint64_t, bool> MCAssembler::handleFixup(const MCAsmLayout &Layout,
-                                                   MCFragment &F,
-                                                   const MCFixup &Fixup, unsigned int &KsError) {
+std::tuple<MCValue, uint64_t, bool>
+MCAssembler::handleFixup(const MCAsmLayout &Layout, MCFragment &F,
+                         const MCFixup &Fixup, unsigned int &KsError) {
   // Evaluate the fixup.
   MCValue Target;
   uint64_t FixedValue;
@@ -670,7 +670,7 @@ std::pair<uint64_t, bool> MCAssembler::handleFixup(const MCAsmLayout &Layout,
   if (!evaluateFixup(Layout, Fixup, &F, Target, FixedValue, KsError)) {
     if (KsError) {
         // return a dummy value
-        return std::make_pair(0, false);
+        return std::make_tuple(Target, 0, false);
     }
     // The fixup was unresolved, we need a relocation. Inform the object
     // writer of the relocation, and give it an opportunity to adjust the
@@ -679,14 +679,14 @@ std::pair<uint64_t, bool> MCAssembler::handleFixup(const MCAsmLayout &Layout,
         if (RefB->getKind() != MCSymbolRefExpr::VK_None) {
             KsError = KS_ERR_ASM_FIXUP_INVALID;
             // return a dummy value
-            return std::make_pair(0, false);
+            return std::make_tuple(Target, 0, false);
         }
     }
     getWriter().recordRelocation(*this, Layout, &F, Fixup, Target, IsPCRel,
                                  FixedValue);
   }
 
-  return std::make_pair(FixedValue, IsPCRel);
+  return std::make_tuple(Target, FixedValue, IsPCRel);
 }
 
 void MCAssembler::layout(MCAsmLayout &Layout, unsigned int &KsError)
@@ -758,11 +758,13 @@ void MCAssembler::layout(MCAsmLayout &Layout, unsigned int &KsError)
       for (const MCFixup &Fixup : Fixups) {
         uint64_t FixedValue;
         bool IsPCRel;
-        std::tie(FixedValue, IsPCRel) = handleFixup(Layout, *F, Fixup, KsError);
+        MCValue Target;
+        std::tie(Target, FixedValue, IsPCRel) =
+            handleFixup(Layout, Frag, Fixup, KsError);
         if (KsError)
             return;
-        getBackend().applyFixup(Fixup, Contents.data(),
-                                Contents.size(), FixedValue, IsPCRel, KsError);
+        getBackend().applyFixup(*this, Fixup, Target, Contents, FixedValue,
+                                IsPCRel, KsError);
         if (KsError)
             return;
       }

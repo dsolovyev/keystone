@@ -74,7 +74,8 @@ public:
     return Infos[Kind - FirstTargetFixupKind];
   }
 
-  void applyFixup(const MCFixup &Fixup, char *Data, unsigned DataSize,
+  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                  const MCValue &Target, MutableArrayRef<char> Data,
                   uint64_t Value, bool IsPCRel, unsigned int &KsError) const override;
 
   bool mayNeedRelaxation(const MCInst &Inst) const override;
@@ -249,8 +250,9 @@ unsigned AArch64AsmBackend::getFixupKindContainereSizeInBytes(unsigned Kind) con
   }
 }
 
-void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                   unsigned DataSize, uint64_t Value,
+void AArch64AsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
+                                   const MCValue &Target,
+                                   MutableArrayRef<char> Data, uint64_t Value,
                                    bool IsPCRel, unsigned int &KsError) const {
   unsigned NumBytes = getFixupKindNumBytes(Fixup.getKind());
   if (!Value)
@@ -263,8 +265,8 @@ void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
   Value <<= Info.TargetOffset;
 
   unsigned Offset = Fixup.getOffset();
-  //assert(Offset + NumBytes <= DataSize && "Invalid fixup offset!");
-  if (Offset + NumBytes > DataSize) {
+  //assert(Offset + NumBytes <= Data.size() && "Invalid fixup offset!");
+  if (Offset + NumBytes > Data.size()) {
       KsError = KS_ERR_ASM_FIXUP_INVALID;
       return;
   }
@@ -281,9 +283,9 @@ void AArch64AsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
     }
   } else {
     // Handle as big-endian
-    //assert((Offset + FulleSizeInBytes) <= DataSize && "Invalid fixup size!");
+    //assert((Offset + FulleSizeInBytes) <= Data.size() && "Invalid fixup size!");
     //assert(NumBytes <= FulleSizeInBytes && "Invalid fixup size!");
-    if ((Offset + FulleSizeInBytes) > DataSize ||
+    if ((Offset + FulleSizeInBytes) > Data.size() ||
             NumBytes > FulleSizeInBytes) {
         KsError = KS_ERR_ASM_FIXUP_INVALID;
         return;
