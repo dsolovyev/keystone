@@ -11,6 +11,7 @@
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm_ks;
@@ -58,6 +59,10 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_JAL;
   case RISCV::fixup_riscv_branch:
     return ELF::R_RISCV_BRANCH;
+  case RISCV::fixup_riscv_rvc_jump:
+    return ELF::R_RISCV_RVC_JUMP;
+  case RISCV::fixup_riscv_rvc_branch:
+    return ELF::R_RISCV_RVC_BRANCH;
   }
 }
 
