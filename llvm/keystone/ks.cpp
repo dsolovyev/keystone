@@ -179,6 +179,9 @@ bool ks_arch_supported(ks_arch arch)
 #ifdef LLVM_ENABLE_ARCH_EVM
         case KS_ARCH_EVM:   return true;
 #endif
+#ifdef LLVM_ENABLE_ARCH_RISCV
+        case KS_ARCH_RISCV: return true;
+#endif
         /* Invalid or disabled arch */
         default:            return false;
     }
@@ -239,8 +242,11 @@ static ks_err InitKs(int arch, ks_engine *ks, std::string TripleName)
     if (ks->arch == KS_ARCH_X86)
         MCPU = "knl";
 
-    if (ks->arch == KS_ARCH_RISCV)
+    if (ks->arch == KS_ARCH_RISCV) {
         ks->FeaturesStr = "+m,+a,+f,+d";
+        if (ks->mode & KS_MODE_RISCVC)
+            ks->FeaturesStr += ",+c";
+    }
 
     ks->MCII = ks->TheTarget->createMCInstrInfo();
     ks->STI = ks->TheTarget->createMCSubtargetInfo(ks->TripleName, MCPU, ks->FeaturesStr);

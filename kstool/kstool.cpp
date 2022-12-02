@@ -84,8 +84,8 @@ static void usage(char *prog)
     }
 
     if (ks_arch_supported(KS_ARCH_RISCV)) {
-        printf("        riscv32:   RISC-V 32 bit\n");
-        printf("        riscv64:   RISC-V 64 bit\n");
+        printf("        riscv32[c]:   RISC-V 32 bit [compressed]\n");
+        printf("        riscv64[c]:   RISC-V 64 bit [compressed]\n");
     }
 
     printf("\nExtra options:\n");
@@ -318,6 +318,14 @@ int main(int argc, char **argv)
 
     if (!strcmp(mode, "riscv64")) {
         err = ks_open(KS_ARCH_RISCV, KS_MODE_RISCV64, &ks);
+    }
+
+    if (!strcmp(mode, "riscv32c")) {
+        err = ks_open(KS_ARCH_RISCV, KS_MODE_RISCV32+KS_MODE_RISCVC, &ks);
+    }
+
+    if (!strcmp(mode, "riscv64c")) {
+        err = ks_open(KS_ARCH_RISCV, KS_MODE_RISCV64+KS_MODE_RISCVC, &ks);
     }
 
     if (err) {

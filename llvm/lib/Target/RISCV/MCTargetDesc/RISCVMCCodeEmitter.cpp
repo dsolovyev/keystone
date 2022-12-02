@@ -84,9 +84,25 @@ void RISCVMCCodeEmitter::encodeInstruction(MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI,
                                            unsigned int &KsError) const {
-  // For now, we only support RISC-V instructions with 32-bit length
-  uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
-  support::endian::Writer<support::little>(OS).write(Bits);
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  // Get byte count of instruction.
+  unsigned Size = Desc.getSize();
+
+  switch (Size) {
+  default:
+    llvm_unreachable("Unhandled encodeInstruction length!");
+  case 2: {
+    uint16_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
+    support::endian::Writer<support::little>(OS).write<uint16_t>(Bits);
+    break;
+  }
+  case 4: {
+    uint32_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
+    support::endian::Writer<support::little>(OS).write(Bits);
+    break;
+  }
+  }
+
   //++MCNumEmitted; // Keep track of the # of mi's emitted.
 }
 
