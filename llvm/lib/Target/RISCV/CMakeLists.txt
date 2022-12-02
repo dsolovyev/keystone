@@ -10,6 +10,8 @@ add_public_tablegen_target(RISCVCommonTableGen)
 
 add_llvm_target(RISCVCodeGen
   RISCVTargetMachine.cpp
+
+  STATIC
   )
 
 add_subdirectory(AsmParser)

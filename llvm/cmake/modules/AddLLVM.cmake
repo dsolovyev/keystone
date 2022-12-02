@@ -533,7 +533,7 @@ macro(add_llvm_library name)
     ""
     ${ARGN})
   if( BUILD_SHARED_LIBS )
-    llvm_add_library(${name} SHARED ${ARGN})
+    llvm_add_library(${name} ${ARGN})
   else()
     llvm_add_library(${name} ${ARGN})
   endif()

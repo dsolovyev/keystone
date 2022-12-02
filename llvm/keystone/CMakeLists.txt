@@ -2,12 +2,10 @@
 
 file(GLOB_RECURSE src_MC "../lib/MC/*.cpp")
 file(GLOB src_Support "../lib/Support/*.c*")
-file(GLOB src_Target "../lib/Target/*.cpp")
 
 set(src_core
   ${src_MC}
   ${src_Support}
-  ${src_Target}
 )
 
 file(GLOB_RECURSE src_AArch64 "../lib/Target/AArch64/*.cpp")
@@ -67,5 +65,5 @@ if (APPLE)
                         INSTALL_RPATH "")
 endif()
 
-target_link_libraries(keystone LLVMRISCVInfo LLVMRISCVDesc LLVMRISCVAsmParser)
+target_link_libraries(keystone LLVMSupport LLVMMC LLVMMCParser LLVMRISCVInfo LLVMRISCVDesc LLVMRISCVAsmParser)
 
