@@ -431,3 +431,4 @@ defm : StPat<store, SW>;
 
 include "RISCVInstrInfoM.td"
 include "RISCVInstrInfoA.td"
+include "RISCVInstrInfoF.td"

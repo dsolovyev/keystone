@@ -240,7 +240,7 @@ static ks_err InitKs(int arch, ks_engine *ks, std::string TripleName)
         MCPU = "knl";
 
     if (ks->arch == KS_ARCH_RISCV)
-        ks->FeaturesStr = "+m,+a";
+        ks->FeaturesStr = "+m,+a,+f";
 
     ks->MCII = ks->TheTarget->createMCInstrInfo();
     ks->STI = ks->TheTarget->createMCSubtargetInfo(ks->TripleName, MCPU, ks->FeaturesStr);
