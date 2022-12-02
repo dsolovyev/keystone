@@ -8,7 +8,7 @@ INCL_DIR = os.path.join('..', 'include', 'keystone')
 # NOTE: this reflects the value of KS_ERR_ASM_xxx in keystone.h
 ks_err_val = { 'KS_ERR_ASM': '128', 'KS_ERR_ASM_ARCH': '512' }
 
-include = [ 'arm.h', 'arm64.h', 'mips.h', 'x86.h', 'sparc.h', 'ppc.h', 'systemz.h', 'hexagon.h', 'evm.h', 'keystone.h' ]
+include = [ 'arm.h', 'arm64.h', 'mips.h', 'x86.h', 'sparc.h', 'ppc.h', 'systemz.h', 'hexagon.h', 'evm.h', 'keystone.h', 'riscv.h' ]
 
 def CamelCase(s):
     # return re.sub(r'(\w)+\_?', lambda m:m.group(0).capitalize(), s)
@@ -175,6 +175,7 @@ template = {
             'x86.h': 'x86',
             'sparc.h': 'sparc',
             'systemz.h': 'systemz',
+            'riscv.h': 'riscv',
             'ppc.h': 'ppc',
             'hexagon.h': 'hexagon',
             'evm.h': 'evm',
