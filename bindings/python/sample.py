@@ -87,6 +87,12 @@ if __name__ == '__main__':
     test_ks(KS_ARCH_PPC, KS_MODE_PPC64, b"add 1, 2, 3")
     test_ks(KS_ARCH_PPC, KS_MODE_PPC64 + KS_MODE_BIG_ENDIAN, b"add 1, 2, 3")
 
+    # RISC-V
+    test_ks(KS_ARCH_RISCV, KS_MODE_RISCV32, b"slli a0, a1, 31")
+    test_ks(KS_ARCH_RISCV, KS_MODE_RISCV64, b"slli a0, a1, 63")
+    test_ks(KS_ARCH_RISCV, KS_MODE_RISCV32 + KS_MODE_RISCVC, b"c.slli a0, 31")
+    test_ks(KS_ARCH_RISCV, KS_MODE_RISCV64 + KS_MODE_RISCVC, b"c.slli a0, 63")
+
     # Sparc
     test_ks(KS_ARCH_SPARC, KS_MODE_SPARC32 + KS_MODE_LITTLE_ENDIAN, b"add %g1, %g2, %g3")
     test_ks(KS_ARCH_SPARC, KS_MODE_SPARC32 + KS_MODE_BIG_ENDIAN, b"add %g1, %g2, %g3")
